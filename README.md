@@ -209,7 +209,3 @@ Aplikacija je dostupna na `http://localhost:3000`.
 ## Autor
 
 Izradila: Vanessa Vinković
-
-Kolegij / smjer: [naziv]
-Mentor: [ime mentora]
-Akademska godina: [godina]

@@ -1,4 +1,4 @@
-#  Instrukcije – sustav za rezervaciju instrukcija
+#  Instrukos – sustav za rezervaciju instrukcija
 
 Završni praktični projekt – baza podataka i web aplikacija za povezivanje učenika i instruktora. Omogućuje pregled dostupnih instruktora i termina, rezervaciju instrukcija te upravljanje rezervacijama kroz administratorski panel.
 

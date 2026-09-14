@@ -31,19 +31,20 @@ function MojeRezervacije() {
   };
 
   const otkazi = async (id) => {
-    const potvrda = window.confirm('Jesi li sigurna da želiš otkazati ovu rezervaciju?');
-    if (!potvrda) return;
+  const potvrda = window.confirm('Jesi li sigurna da želiš otkazati ovu rezervaciju?');
+  if (!potvrda) return;
 
-    setOtkazivanjeUTijeku(id);
-    try {
-      await axios.put(`http://localhost:5001/api/rezervacije/${id}/otkazi`);
-      const res = await axios.get(`http://localhost:5001/api/rezervacije/moje/${oib}`);
-      setRezervacije(res.data);
-    } catch (err) {
-      alert('Došlo je do greške pri otkazivanju.');
-    } finally {
-      setOtkazivanjeUTijeku(null);
-    }
+  setOtkazivanjeUTijeku(id);
+  try {
+    await axios.put(`http://localhost:5001/api/rezervacije/${id}/otkazi`, { oib_ucenik: oib });
+    const res = await axios.get(`http://localhost:5001/api/rezervacije/moje/${oib}`);
+    setRezervacije(res.data);
+  } catch (err) {
+    alert(err.response?.data?.poruka || 'Došlo je do greške pri otkazivanju.');
+  } finally {
+    setOtkazivanjeUTijeku(null);
+  }
+
   };
 
   return (

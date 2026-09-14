@@ -6,20 +6,23 @@ import Termini from './components/Termini';
 import MojeRezervacije from './components/MojeRezervacije';
 import AdminLogin from './components/AdminLogin';
 import AdminPanel from './components/AdminPanel';
+import { dohvatiToken, obrisiToken } from './utils/auth';
 import './App.css';
-
-function slug(naziv) {
-  return naziv.toLowerCase().replace(/\s+/g, '-');
-}
 
 function App() {
   const [aktivniTab, setAktivniTab] = useState('home');
   const [scrollNaPredmet, setScrollNaPredmet] = useState(null);
-  const [adminPrijavljen, setAdminPrijavljen] = useState(false);
+  const [adminPrijavljen, setAdminPrijavljen] = useState(!!dohvatiToken());
 
   const idiNaPredmet = (nazivPredmeta) => {
     setAktivniTab('termini');
     setScrollNaPredmet(nazivPredmeta);
+  };
+
+  const odjava = () => {
+    obrisiToken();
+    setAdminPrijavljen(false);
+    setAktivniTab('home');
   };
 
   const tabovi = [
@@ -31,7 +34,7 @@ function App() {
 
   if (aktivniTab === 'admin') {
     return adminPrijavljen ? (
-      <AdminPanel onOdjava={() => { setAdminPrijavljen(false); setAktivniTab('home'); }} />
+      <AdminPanel onOdjava={odjava} />
     ) : (
       <AdminLogin onPrijava={() => setAdminPrijavljen(true)} />
     );

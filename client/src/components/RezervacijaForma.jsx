@@ -15,23 +15,23 @@ function RezervacijaForma({ termin, onZatvori, onUspjeh }) {
   const promjena = (e) => {
     setPodaci({ ...podaci, [e.target.name]: e.target.value });
   };
-
   const posalji = async (e) => {
     e.preventDefault();
     setGreska('');
     setUcitavanje(true);
 
-    try {
-      await axios.post('http://localhost:5001/api/rezervacije', {
-        ...podaci,
-        termin_id: termin.termin_id,
-      });
-      onUspjeh();
-    } catch (err) {
-      setGreska(err.response?.data?.poruka || 'Došlo je do greške. Pokušaj ponovno.');
-    } finally {
-      setUcitavanje(false);
-    }
+  try {
+    const res = await axios.post('http://localhost:5001/api/rezervacije', {
+      ...podaci,
+      termin_id: termin.termin_id,
+    });
+    onUspjeh(res.data.napomena);
+  } catch (err) {
+    setGreska(err.response?.data?.poruka || 'Došlo je do greške. Pokušaj ponovno.');
+  } finally {
+    setUcitavanje(false);
+  }
+
   };
 
   return (

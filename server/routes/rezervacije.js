@@ -1,9 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const jwt = require('jsonwebtoken');
+const provjeriAdmina = require('../middleware/adminAuth');
+const { isValidOIB } = require('../utils/oib');
 
-// GET sve rezervacije
-router.get('/', async (req, res) => {
+// GET sve rezervacije (admin)
+router.get('/', provjeriAdmina, async (req, res) => {
   try {
     const result = await pool.query(`
       SELECT 
@@ -26,7 +29,7 @@ router.get('/', async (req, res) => {
   }
 });
 
-// POST nova rezervacija
+// POST nova rezervacija (javno)
 router.post('/', async (req, res) => {
   const { oib_ucenik, ime, prezime, email, telefon, termin_id } = req.body;
 
@@ -34,7 +37,13 @@ router.post('/', async (req, res) => {
     return res.status(400).json({ poruka: 'Nedostaju obavezni podaci' });
   }
 
+  if (!isValidOIB(oib_ucenik)) {
+    return res.status(400).json({ poruka: 'OIB nije ispravan' });
+  }
+
   try {
+    let napomena = null;
+
     const postoji = await pool.query('SELECT * FROM ucenik WHERE oib_ucenik = $1', [oib_ucenik]);
 
     if (postoji.rows.length === 0) {
@@ -42,6 +51,8 @@ router.post('/', async (req, res) => {
         'INSERT INTO ucenik (oib_ucenik, ime, prezime, email, telefon) VALUES ($1, $2, $3, $4, $5)',
         [oib_ucenik, ime, prezime, email, telefon]
       );
+    } else {
+      napomena = 'Pod ovim OIB-om već postoji učenik u sustavu - korišteni su postojeći spremljeni podaci.';
     }
 
     const zauzet = await pool.query(
@@ -58,8 +69,12 @@ router.post('/', async (req, res) => {
       [oib_ucenik, termin_id]
     );
 
-    res.status(201).json(novaRezervacija.rows[0]);
+    res.status(201).json({ ...novaRezervacija.rows[0], napomena });
   } catch (err) {
+    // 23505 = povreda unique indexa - netko je rezervirao taj termin u međuvremenu
+    if (err.code === '23505') {
+      return res.status(400).json({ poruka: 'Termin je već rezerviran' });
+    }
     console.error(err.message);
     res.status(500).json({ poruka: 'Greška na serveru' });
   }
@@ -96,19 +111,40 @@ router.get('/moje/:oib', async (req, res) => {
   }
 });
 
-// PUT otkazivanje rezervacije
+// PUT otkazivanje - vlasnik (OIB) ili admin
 router.put('/:id/otkazi', async (req, res) => {
   const { id } = req.params;
+  const { oib_ucenik } = req.body;
+  const authHeader = req.headers.authorization;
+
+  let jeAdmin = false;
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      jeAdmin = true;
+    } catch (err) {
+      // token nevažeći - tretiramo kao da nije admin
+    }
+  }
 
   try {
+    const rezervacija = await pool.query(
+      'SELECT * FROM rezervacija WHERE rezervacija_id = $1',
+      [id]
+    );
+
+    if (rezervacija.rows.length === 0) {
+      return res.status(404).json({ poruka: 'Rezervacija nije pronađena' });
+    }
+
+    if (!jeAdmin && rezervacija.rows[0].oib_ucenik !== oib_ucenik) {
+      return res.status(403).json({ poruka: 'Nemate ovlasti otkazati ovu rezervaciju' });
+    }
+
     const rezultat = await pool.query(
       `UPDATE rezervacija SET status = 'otkazana' WHERE rezervacija_id = $1 RETURNING *`,
       [id]
     );
-
-    if (rezultat.rows.length === 0) {
-      return res.status(404).json({ poruka: 'Rezervacija nije pronađena' });
-    }
 
     res.json(rezultat.rows[0]);
   } catch (err) {
@@ -117,18 +153,35 @@ router.put('/:id/otkazi', async (req, res) => {
   }
 });
 
-// PUT potvrda rezervacije
-router.put('/:id/potvrdi', async (req, res) => {
+// PUT potvrda rezervacije (admin) - kreira i zapis o plaćanju
+router.put('/:id/potvrdi', provjeriAdmina, async (req, res) => {
   const { id } = req.params;
 
   try {
+    const rezervacija = await pool.query(
+      `SELECT r.*, t.cijena FROM rezervacija r JOIN termin t ON r.termin_id = t.termin_id WHERE r.rezervacija_id = $1`,
+      [id]
+    );
+
+    if (rezervacija.rows.length === 0) {
+      return res.status(404).json({ poruka: 'Rezervacija nije pronađena' });
+    }
+
     const rezultat = await pool.query(
       `UPDATE rezervacija SET status = 'potvrdena' WHERE rezervacija_id = $1 RETURNING *`,
       [id]
     );
 
-    if (rezultat.rows.length === 0) {
-      return res.status(404).json({ poruka: 'Rezervacija nije pronađena' });
+    const postojiPlacanje = await pool.query(
+      'SELECT * FROM placanje WHERE rezervacija_id = $1',
+      [id]
+    );
+
+    if (postojiPlacanje.rows.length === 0) {
+      await pool.query(
+        `INSERT INTO placanje (datum_placanja, iznos, nacin, rezervacija_id) VALUES (CURRENT_DATE, $1, 'gotovina', $2)`,
+        [rezervacija.rows[0].cijena, id]
+      );
     }
 
     res.json(rezultat.rows[0]);

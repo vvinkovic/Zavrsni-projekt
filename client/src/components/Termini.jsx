@@ -39,12 +39,16 @@ function Termini({ scrollNaPredmet, adminMode }) {
     }
   }, [scrollNaPredmet, termini]);
 
-  const uspjesnaRezervacija = () => {
-    setOdabraniTermin(null);
-    setPorukaUspjeha('Rezervacija je uspješno kreirana! Instruktor će je uskoro potvrditi.');
-    dohvatiTermine();
-    setTimeout(() => setPorukaUspjeha(''), 5000);
-  };
+  const uspjesnaRezervacija = (napomena) => {
+  setOdabraniTermin(null);
+  setPorukaUspjeha(
+    napomena
+      ? `Rezervacija je uspješno kreirana! ${napomena}`
+      : 'Rezervacija je uspješno kreirana! Instruktor će je uskoro potvrditi.'
+  );
+  dohvatiTermine();
+  setTimeout(() => setPorukaUspjeha(''), 7000);
+};
 
   const grupirano = termini.reduce((acc, t) => {
     if (!acc[t.predmet]) acc[t.predmet] = [];

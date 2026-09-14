@@ -1,9 +1,10 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const provjeriAdmina = require('../middleware/adminAuth');
 
-// GET svi učenici
-router.get('/', async (req, res) => {
+// samo admin smije vidjeti popis učenika (OIB, email, telefon su osjetljivi podaci)
+router.get('/', provjeriAdmina, async (req, res) => {
   try {
     const result = await pool.query('SELECT * FROM ucenik ORDER BY prezime');
     res.json(result.rows);

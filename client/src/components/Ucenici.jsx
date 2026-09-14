@@ -1,14 +1,20 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { authHeader } from '../utils/auth';
 
 function Ucenici() {
   const [ucenici, setUcenici] = useState([]);
+  const [greska, setGreska] = useState('');
 
   useEffect(() => {
-    axios.get('http://localhost:5001/api/ucenici')
+    axios.get('http://localhost:5001/api/ucenici', authHeader())
       .then(res => setUcenici(res.data))
-      .catch(err => console.error(err));
+      .catch(err => {
+        setGreska(err.response?.data?.poruka || 'Greška pri dohvaćanju podataka');
+      });
   }, []);
+
+  if (greska) return <div className="empty-state">{greska}</div>;
 
   return (
     <div className="card-grid">

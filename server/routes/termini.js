@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const provjeriAdmina = require('../middleware/adminAuth');
 
 router.get('/', async (req, res) => {
   try {
@@ -33,7 +34,6 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET opcije za formu (instruktor+predmet kombinacije i predavaonice)
 router.get('/opcije', async (req, res) => {
   try {
     const kombinacije = await pool.query(`
@@ -56,8 +56,8 @@ router.get('/opcije', async (req, res) => {
   }
 });
 
-// POST novi termin
-router.post('/', async (req, res) => {
+// samo admin smije dodavati nove termine
+router.post('/', provjeriAdmina, async (req, res) => {
   const { datum, vrijeme_pocetka, trajanje, cijena, predavaonica_id, instruktor_predmet_id } = req.body;
 
   if (!datum || !vrijeme_pocetka || !trajanje || !cijena || !predavaonica_id || !instruktor_predmet_id) {
@@ -77,4 +77,5 @@ router.post('/', async (req, res) => {
     res.status(500).json({ poruka: 'Greška na serveru' });
   }
 });
+
 module.exports = router;

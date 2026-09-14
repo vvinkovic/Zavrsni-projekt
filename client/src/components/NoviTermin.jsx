@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
+import { authHeader } from '../utils/auth';
 
 function NoviTermin({ onDodano }) {
   const [opcije, setOpcije] = useState({ kombinacije: [], predavaonice: [] });
@@ -30,7 +31,7 @@ function NoviTermin({ onDodano }) {
     setUcitavanje(true);
 
     try {
-      await axios.post('http://localhost:5001/api/termini', podaci);
+      await axios.post('http://localhost:5001/api/termini', podaci, authHeader());
       setPoruka('✅ Termin uspješno dodan');
       setPodaci({
         datum: '',

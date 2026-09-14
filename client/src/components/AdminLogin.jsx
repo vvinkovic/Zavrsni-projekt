@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import axios from 'axios';
+import { spremiToken } from '../utils/auth';
 
 function AdminLogin({ onPrijava }) {
   const [lozinka, setLozinka] = useState('');
@@ -12,10 +13,11 @@ function AdminLogin({ onPrijava }) {
     setUcitavanje(true);
 
     try {
-      await axios.post('http://localhost:5001/api/admin/login', { lozinka });
+      const res = await axios.post('http://localhost:5001/api/admin/login', { lozinka });
+      spremiToken(res.data.token);
       onPrijava();
     } catch (err) {
-      setGreska('Pogrešna lozinka');
+      setGreska(err.response?.data?.poruka || 'Pogrešna lozinka');
     } finally {
       setUcitavanje(false);
     }

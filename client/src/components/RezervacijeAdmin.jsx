@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import axios from 'axios';
 import { formatDatum } from '../utils/format';
+import { authHeader } from '../utils/auth';
 
 function statusBoja(status) {
   if (status === 'potvrdena') return 'status-potvrdena';
@@ -13,11 +14,12 @@ function RezervacijeAdmin() {
   const [filterStatus, setFilterStatus] = useState('sve');
   const [filterDatum, setFilterDatum] = useState('');
   const [akcijaUTijeku, setAkcijaUTijeku] = useState(null);
+  const [greska, setGreska] = useState('');
 
   const dohvatiRezervacije = () => {
-    axios.get('http://localhost:5001/api/rezervacije')
-      .then(res => setRezervacije(res.data))
-      .catch(err => console.error(err));
+    axios.get('http://localhost:5001/api/rezervacije', authHeader())
+      .then(res => { setRezervacije(res.data); setGreska(''); })
+      .catch(err => setGreska(err.response?.data?.poruka || 'Greška pri dohvaćanju podataka'));
   };
 
   useEffect(() => {
@@ -27,10 +29,10 @@ function RezervacijeAdmin() {
   const promijeniStatus = async (id, akcija) => {
     setAkcijaUTijeku(id);
     try {
-      await axios.put(`http://localhost:5001/api/rezervacije/${id}/${akcija}`);
+      await axios.put(`http://localhost:5001/api/rezervacije/${id}/${akcija}`, {}, authHeader());
       dohvatiRezervacije();
     } catch (err) {
-      alert('Došlo je do greške.');
+      alert(err.response?.data?.poruka || 'Došlo je do greške.');
     } finally {
       setAkcijaUTijeku(null);
     }
@@ -46,6 +48,8 @@ function RezervacijeAdmin() {
     setFilterStatus('sve');
     setFilterDatum('');
   };
+
+  if (greska) return <div className="empty-state">{greska}</div>;
 
   return (
     <div>

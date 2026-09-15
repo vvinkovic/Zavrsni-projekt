@@ -10,9 +10,16 @@ import { dohvatiToken, obrisiToken } from './utils/auth';
 import './App.css';
 
 function App() {
-  const [aktivniTab, setAktivniTab] = useState('home');
+  const [aktivniTab, setAktivniTabRaw] = useState(
+    sessionStorage.getItem('aktivni_tab') || 'home'
+  );
   const [scrollNaPredmet, setScrollNaPredmet] = useState(null);
   const [adminPrijavljen, setAdminPrijavljen] = useState(!!dohvatiToken());
+
+  const setAktivniTab = (tab) => {
+    setAktivniTabRaw(tab);
+    sessionStorage.setItem('aktivni_tab', tab);
+  };
 
   const idiNaPredmet = (nazivPredmeta) => {
     setAktivniTab('termini');

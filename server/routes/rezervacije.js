@@ -52,6 +52,16 @@ router.post('/', async (req, res) => {
         [oib_ucenik, ime, prezime, email, telefon]
       );
     } else {
+      const postojeciUcenik = postoji.rows[0];
+      const imeSeSlaze = postojeciUcenik.ime.trim().toLowerCase() === ime.trim().toLowerCase();
+      const prezimeSeSlaze = postojeciUcenik.prezime.trim().toLowerCase() === prezime.trim().toLowerCase();
+
+      if (!imeSeSlaze || !prezimeSeSlaze) {
+        return res.status(400).json({
+          poruka: 'Uneseni OIB je već registriran pod drugim imenom i prezimenom. Provjerite jeste li ispravno unijeli podatke.'
+        });
+      }
+
       napomena = 'Pod ovim OIB-om već postoji učenik u sustavu - korišteni su postojeći spremljeni podaci.';
     }
 
@@ -178,11 +188,14 @@ router.put('/:id/potvrdi', provjeriAdmina, async (req, res) => {
     );
 
     if (postojiPlacanje.rows.length === 0) {
-      await pool.query(
-        `INSERT INTO placanje (datum_placanja, iznos, nacin, rezervacija_id) VALUES (CURRENT_DATE, $1, 'gotovina', $2)`,
-        [rezervacija.rows[0].cijena, id]
-      );
-    }
+  const brojPlacanja = await pool.query('SELECT COUNT(*) FROM placanje');
+  const noviId = (parseInt(brojPlacanja.rows[0].count, 10) + 1).toString();
+
+  await pool.query(
+    `INSERT INTO placanje (placanje_id, datum_placanja, iznos, nacin, rezervacija_id) VALUES ($1, CURRENT_DATE, $2, 'gotovina', $3)`,
+    [noviId, rezervacija.rows[0].cijena, id]
+  );
+}
 
     res.json(rezultat.rows[0]);
   } catch (err) {

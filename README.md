@@ -60,9 +60,12 @@ Zavrsni projekt/
 │       └── App.js
 │
 └── server/                 # Node.js/Express backend
+    ├── baza_zavrsni.sql    # Baza podataka
     ├── routes/             # API rute (ucenici, instruktori, termini...)
     ├── db.js               # veza s PostgreSQL bazom
     ├── server.js
+    ├── middleware
+    ├── utils
     └── .env.example        # predložak za konfiguraciju
 ```
 
@@ -98,7 +101,7 @@ Relacijska baza podataka je izrađena u PostgreSQL-u i sadrži 8 međusobno pove
 **`predavaonica`**
 | Stupac | Tip | Opis |
 |---|---|---|
-| `broj_predavaonice` | SERIAL PK | jedinstveni identifikator |
+| `broj_predavaonice` | VARCHAR PK | jedinstveni identifikator |
 | `naziv`, `lokacija` | VARCHAR | podaci o prostoriji |
 
 **`instruktor_predmet`** – rješava vezu M:N između instruktora i predmeta
@@ -130,7 +133,7 @@ Relacijska baza podataka je izrađena u PostgreSQL-u i sadrži 8 međusobno pove
 **`placanje`**
 | Stupac | Tip | Opis |
 |---|---|---|
-| `placanje_id` | PK | jedinstveni identifikator |
+| `placanje_id` | SERIAL PK | jedinstveni identifikator |
 | `datum_placanja`, `iznos`, `nacin` | DATE / NUMERIC / VARCHAR | podaci o plaćanju |
 | `rezervacija_id` | FK → rezervacija, UNIQUE | veza 1:1 s rezervacijom |
 
@@ -187,7 +190,7 @@ npm start
 
 Aplikacija je dostupna na `http://localhost:3000`.
 
-> **Napomena:** Projekt koristi lokalnu PostgreSQL bazu podataka koja nije uključena u repozitorij (samo struktura kroz kod). Za potpuno pokretanje potrebno je prethodno kreirati bazu prema uputama iznad.
+> **Napomena:** Projekt koristi lokalnu PostgreSQL bazu podataka koja je uključena u repozitorij.
 
 ## API rute
 

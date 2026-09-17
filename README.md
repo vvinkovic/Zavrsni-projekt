@@ -165,8 +165,13 @@ DB_HOST=localhost
 DB_NAME=naziv_baze
 DB_PASSWORD=vasa_lozinka
 DB_PORT=5432
-ADMIN_LOZINKA=vasa_admin_lozinka
+ADMIN_LOZINKA_HASH=bcrypt_hash_admin_lozinke
+JWT_SECRET=tajni_kljuc_za_potpisivanje_tokena
 ```
+
+> ADMIN_LOZINKA_HASH treba sadržavati bcrypt hash administratorske lozinke, a ne samu lozinku. Hash se generira naredbom:
+> node -e "require('bcrypt').hash('lozinka',10).then(console.log)"
+> Dobiveni hash kopirati u .env datoteku kao vrijednost ADMIN_LOZINKA_HASH. JWT_SECRET postaviti na vlastiti tajni ključ za potpisivanje JWT tokena.
 
 Zatim pokrenuti:
 

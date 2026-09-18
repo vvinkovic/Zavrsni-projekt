@@ -60,7 +60,7 @@ Zavrsni projekt/
 │       └── App.js
 │
 └── server/                 # Node.js/Express backend
-    ├── baza_zavrsni.sql    # Baza podataka
+    ├── baza_zpp.sql    # Baza podataka
     ├── routes/             # API rute (ucenici, instruktori, termini...)
     ├── db.js               # veza s PostgreSQL bazom
     ├── server.js

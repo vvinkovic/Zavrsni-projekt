@@ -1,9 +1,20 @@
 const express = require('express');
 const router = express.Router();
 const pool = require('../db');
+const jwt = require('jsonwebtoken');
 const provjeriAdmina = require('../middleware/adminAuth');
 
 router.get('/', async (req, res) => {
+  const authHeader = req.headers.authorization;
+  let prikaziSve = false;
+
+  if (authHeader && authHeader.startsWith('Bearer ')) {
+    try {
+      jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
+      prikaziSve = true;
+    } catch (err) { /* nije admin */ }
+  }
+
   try {
     const result = await pool.query(`
       SELECT 
@@ -25,6 +36,7 @@ router.get('/', async (req, res) => {
       JOIN instruktor_predmet ip ON t.instruktor_predmet_id = ip.instruktor_predmet_id
       JOIN predmet pr ON ip.predmet_id = pr.predmet_id
       JOIN instruktor i ON ip.instruktor_id = i.instruktor_id
+      ${prikaziSve ? '' : 'WHERE t.datum >= CURRENT_DATE'}
       ORDER BY t.datum, t.vrijeme_pocetka
     `);
     res.json(result.rows);
@@ -43,20 +55,14 @@ router.get('/opcije', async (req, res) => {
       JOIN predmet pr ON ip.predmet_id = pr.predmet_id
       ORDER BY pr.naziv
     `);
-
     const predavaonice = await pool.query('SELECT * FROM predavaonica ORDER BY naziv');
-
-    res.json({
-      kombinacije: kombinacije.rows,
-      predavaonice: predavaonice.rows,
-    });
+    res.json({ kombinacije: kombinacije.rows, predavaonice: predavaonice.rows });
   } catch (err) {
     console.error(err.message);
     res.status(500).json({ poruka: 'Greška na serveru' });
   }
 });
 
-// samo admin smije dodavati nove termine
 router.post('/', provjeriAdmina, async (req, res) => {
   const { datum, vrijeme_pocetka, trajanje, cijena, predavaonica_id, instruktor_predmet_id } = req.body;
 
@@ -70,7 +76,6 @@ router.post('/', provjeriAdmina, async (req, res) => {
        VALUES ($1, $2, $3, $4, $5, $6) RETURNING *`,
       [datum, vrijeme_pocetka, trajanje, cijena, predavaonica_id, instruktor_predmet_id]
     );
-
     res.status(201).json(rezultat.rows[0]);
   } catch (err) {
     console.error(err.message);

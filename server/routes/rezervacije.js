@@ -5,7 +5,6 @@ const jwt = require('jsonwebtoken');
 const provjeriAdmina = require('../middleware/adminAuth');
 const { isValidOIB } = require('../utils/oib');
 
-// GET sve rezervacije (admin)
 router.get('/', provjeriAdmina, async (req, res) => {
   try {
     const result = await pool.query(`
@@ -29,7 +28,6 @@ router.get('/', provjeriAdmina, async (req, res) => {
   }
 });
 
-// POST nova rezervacija (javno)
 router.post('/', async (req, res) => {
   const { oib_ucenik, ime, prezime, email, telefon, termin_id } = req.body;
 
@@ -61,7 +59,6 @@ router.post('/', async (req, res) => {
           poruka: 'Uneseni OIB je već registriran pod drugim imenom i prezimenom. Provjerite jeste li ispravno unijeli podatke.'
         });
       }
-
       napomena = 'Pod ovim OIB-om već postoji učenik u sustavu - korišteni su postojeći spremljeni podaci.';
     }
 
@@ -81,7 +78,6 @@ router.post('/', async (req, res) => {
 
     res.status(201).json({ ...novaRezervacija.rows[0], napomena });
   } catch (err) {
-    // 23505 = povreda unique indexa - netko je rezervirao taj termin u međuvremenu
     if (err.code === '23505') {
       return res.status(400).json({ poruka: 'Termin je već rezerviran' });
     }
@@ -90,7 +86,6 @@ router.post('/', async (req, res) => {
   }
 });
 
-// GET rezervacije za konkretnog učenika (po OIB-u)
 router.get('/moje/:oib', async (req, res) => {
   const { oib } = req.params;
 
@@ -132,15 +127,12 @@ router.put('/:id/otkazi', async (req, res) => {
     try {
       jwt.verify(authHeader.split(' ')[1], process.env.JWT_SECRET);
       jeAdmin = true;
-    } catch (err) {
-      // token nevažeći - tretiramo kao da nije admin
-    }
+    } catch (err) { /* nije admin */ }
   }
 
   try {
     const rezervacija = await pool.query(
-      'SELECT * FROM rezervacija WHERE rezervacija_id = $1',
-      [id]
+      'SELECT * FROM rezervacija WHERE rezervacija_id = $1', [id]
     );
 
     if (rezervacija.rows.length === 0) {
@@ -149,6 +141,10 @@ router.put('/:id/otkazi', async (req, res) => {
 
     if (!jeAdmin && rezervacija.rows[0].oib_ucenik !== oib_ucenik) {
       return res.status(403).json({ poruka: 'Nemate ovlasti otkazati ovu rezervaciju' });
+    }
+
+    if (rezervacija.rows[0].status === 'otkazana') {
+      return res.status(400).json({ poruka: 'Rezervacija je već otkazana' });
     }
 
     const rezultat = await pool.query(
@@ -177,6 +173,14 @@ router.put('/:id/potvrdi', provjeriAdmina, async (req, res) => {
       return res.status(404).json({ poruka: 'Rezervacija nije pronađena' });
     }
 
+    const trenutniStatus = rezervacija.rows[0].status;
+    if (trenutniStatus === 'otkazana') {
+      return res.status(400).json({ poruka: 'Rezervacija je otkazana i ne može se potvrditi' });
+    }
+    if (trenutniStatus === 'potvrdena') {
+      return res.status(400).json({ poruka: 'Rezervacija je već potvrđena' });
+    }
+
     const rezultat = await pool.query(
       `UPDATE rezervacija SET status = 'potvrdena' WHERE rezervacija_id = $1 RETURNING *`,
       [id]
@@ -188,17 +192,17 @@ router.put('/:id/potvrdi', provjeriAdmina, async (req, res) => {
     );
 
     if (postojiPlacanje.rows.length === 0) {
-  const brojPlacanja = await pool.query('SELECT COUNT(*) FROM placanje');
-  const noviId = (parseInt(brojPlacanja.rows[0].count, 10) + 1).toString();
-
-  await pool.query(
-    `INSERT INTO placanje (placanje_id, datum_placanja, iznos, nacin, rezervacija_id) VALUES ($1, CURRENT_DATE, $2, 'gotovina', $3)`,
-    [noviId, rezervacija.rows[0].cijena, id]
-  );
-}
+      await pool.query(
+        `INSERT INTO placanje (datum_placanja, iznos, nacin, rezervacija_id) VALUES (CURRENT_DATE, $1, 'gotovina', $2)`,
+        [rezervacija.rows[0].cijena, id]
+      );
+    }
 
     res.json(rezultat.rows[0]);
   } catch (err) {
+    if (err.code === '23505') {
+      return res.status(400).json({ poruka: 'Termin je u međuvremenu zauzet drugom rezervacijom' });
+    }
     console.error(err.message);
     res.status(500).json({ poruka: 'Greška na serveru' });
   }
